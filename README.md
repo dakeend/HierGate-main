@@ -230,7 +230,3 @@ The neural architecture uses a multiplex heterogeneous graph neural network to p
 - Regenerating graphs from raw structures requires external databases and software that are not bundled in the repository.
 - The code currently contains some experiment-specific defaults, including task lists and GPU device selection.
 - The project provides a lightweight `requirements.txt`; results may still depend on PyTorch, PyTorch Geometric, CUDA, and package versions.
-
-## License
-
-No license file is currently included in this repository. Add an explicit license before public release or redistribution.
