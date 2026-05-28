@@ -1,0 +1,600 @@
+\documentclass[journal,twoside,web]{ieeecolor}
+\usepackage{generic}
+\usepackage[nocompress]{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{algorithm,algorithmic} 
+\usepackage{hyperref}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\aboverulesep=0pt \belowrulesep=0pt
+\usepackage{bm}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\hypersetup{hidelinks=true}
+\markboth{\hskip25pc IEEE JOURNAL OF BIOMEDICAL AND HEALTH INFORMATICS}
+{Zhang \MakeLowercase{\textit{et al.}}: HETEROGENEOUS GRAPH LEARNING FOR PROTEIN STABILITY PREDICTION}
+
+\begin{document}
+
+\title{Hierarchically Gated Multiplex Heterogeneous Graph Neural Network with Self-Distillation for Protein Stability Prediction}
+
+\author{Shugang Zhang, Nianwen Xing, Wenxu Wang, and Zhiqiang Wei
+\thanks{Received 27 May 2026. This work was supported in part by the National Natural Science Foundation of China under Grant 62306293, in part by the Natural Science Foundation of Shandong Province under Grant ZR2025MS1069, in part by the Fundamental Research Funds for the Central Universities under Grant 202561013, and in part by the Youth Innovation Technology Project of Higher School in Shandong Province under Grant 2025KJH006. \textit{(Corresponding author: Shugang Zhang, Zhiqiang Wei.)}}
+\thanks{Shugang Zhang, Nianwen Xing and Wenxu Wang are with the College of Computer Science and Technology, Ocean University of China, Qingdao 266100, China (e-mail: zsg@ouc.edu.cn).}
+\thanks{Zhiqiang Wei is with the College of Computer Science and Technology, Ocean University of China, Qingdao 266100, China, and also with the College of Computer Science and Technology, Qingdao University, Qingdao 266071, China (e-mail: weizhiqiang@ouc.edu.cn).}}
+
+\maketitle
+
+\begin{abstract}
+Predicting the impact of protein residue mutations on thermal stability is critical for protein engineering and for understanding how mutations contribute to cancer development. Recent advances in deep learning demonstrate great promise in the prediction of mutation-induced protein stability changes; however, current approaches face several drawbacks to be solved: 1) neglect the inherent heterogeneity of relations among residues, 2) lack of information-filtering from noisy context, and 3) insufficient supervision of sparse and weak signals of mutation. To address these issues, we propose a protein stability prediction model named HierGate, which is featured by a hierarchically gated multiplex heterogeneous graph neural network with self-distillation mechanism. It is designed to capture the multiplex heterogeneous relations among residues; on the other hand, hierarchical gating mechanism is introduced to suppress contextual noise upon heterogeneous neighbor aggregation. In addition, self-distillation strategy is leveraged to amplify the weak mutation signal. Comprehensive evaluations on eight benchmark datasets demonstrate that the proposed method outperforms advanced protein stability prediction approaches, with an improvement of up to 16\% over the second-best baseline on certain datasets. We also demonstrate the practical capability of HierGate in investigating the underlying mechanisms of cancer development and in guiding directed evolution in protein engineering.
+\end{abstract}
+
+\begin{IEEEkeywords}
+graph neural network, heterogeneous graph, mutation effect, protein stability, self-distillation.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:introduction}
+
+\IEEEPARstart{P}{roteins} fold into specific three-dimensional structures determined by their amino acid sequences \cite{Guerois2002_a}. A single amino acid substitution, such as a missense mutation, can alter the protein's three-dimensional structure and molecular stability, thereby leading to functional impairment \cite{May2025}. For example, certain cancers have been associated with amino acid alterations that perturb protein stability, potentially leading to impaired protein function. Moreover, functional engineering of proteins is often constrained by protein stability \cite{Socha2013,Petrosino2021_a,Chilln-Pino2024}. Therefore, accurately predicting how mutations affect protein stability is of critical importance for precision medicine and protein engineering.
+
+According to the data modalities and methodological paradigms employed, existing approaches can be categorized into sequence-based and structure-based methods. Sequence-based methods primarily rely on features extracted from protein amino acid sequences. Early studies typically combined evolutionary information derived from protein sequences or physicochemical property features with traditional machine learning models to predict the effects of protein mutations on thermal stability \cite{Capriotti2005_a,Cheng2006_a,Li2021,Fariselli2015_a}. In recent years, deep learning-based methods have been proposed \cite{Gong2023_c,Pancotti2021_a,Cuturello2024}. PROSTATA \cite{Umerenkov2023} adopted protein language models for encoding the protein wild-type and mutated sequences. The protein language model input is then processed in PROSTATA using a simple neural network with a single hidden layer. ThermoMPNN \cite{Dieckhaus2024} also adopted a pretrained pLM called ProteinMPNN \cite{Dauparas2022} in combination with a deep network to predict $\Delta\Delta G$ upon single-point variations. Among them, DDGemb \cite{Savojardo2024} leverages embeddings from the ESM-2 \cite{Lin2023_a} protein language model and employs a Transformer encoder to predict mutation-induced protein stability changes ($\Delta\Delta G$). However, the protein stability change is essentially a structure-related process rather than a sequence-related one. Consequently, inferring stability changes from sequence alone yields suboptimal performance due to the neglect of structural features.
+
+Structure-based methods compensate for the limitations of sequence-based approaches. Early structure-based methods primarily relied on force-field and energy-function-based modeling \cite{Schymkowitz2005,Kellogg2011_a} or traditional machine learning models \cite{Chen2020_a,Montanucci2019_a,Savojardo2016,Laimer2015,Pires2014_a,Dehouck2011_a}; in recent years, deep learning methods have gradually been introduced into structure-based protein stability prediction tasks \cite{Xu2024,Diaz2024,Blaabjerg2024,Li2020_b,Li2024_c,Cheng2024,Sun2025}. Briefly, these methods treat protein contact maps as graphs and employ graph neural networks to extract changes of structural characteristics before and after mutation. For example, GNN-based models such as ProS-GNN \cite{Wang2023} propose an atom-level geometrically gated graph neural network that captures local microenvironmental features. GLGNN-UCL \cite{Gong2023_a} employs a graph neural network to aggregate structural features and introduces an unbiased curriculum learning strategy to optimize the loss function for $\Delta\Delta G$ prediction. More recently, ThermoAGT-GA \cite{Madani2024_a} has been proposed, which is based on an enhanced gated-attention graph neural network with a global attention mechanism, leveraging both protein sequence and structural information to predict $\Delta\Delta G$ for single-point or multi-point mutations.
+
+In general, current structure-based methods have achieved good performance in predicting protein stability changes upon mutation. However, these methods still face some challenges as follows: 1) \emph{Neglect of relation heterogeneity}. Multiple relations exist among amino acid residues in a protein, which reflect structural characteristics in different aspects. Most current methods utilize only residue contacts while neglecting the information in other relation types, leading to inadequate modeling of complicated protein structures. 2) \emph{Lack of information-filtering mechanisms}. Different from regular protein tasks like protein function prediction, the prediction of stability changes upon mutation is a highly localized task, where the mutation features are subtle and easily overwhelmed by irrelevant structural context. Existing approaches lack an information-filtering design to identify valid features while suppressing noise that is irrelevant to the prediction task. 3) \emph{Insufficient supervision of sparse signals}. Again, the mutation signals are subtle and sparse among structural context. The model needs to infer the stability change given only a single residue mutation among up to hundreds of residues. Therefore, it would not be excessive to make full use of this information, while current methods adopt conventional label supervision scheme without further optimization.
+
+Aiming at the above problems, we propose \textbf{HierGate}, a \textbf{HIER}archically \textbf{GATE}d multiplex heterogeneous graph neural network with self-distillation, for predicting mutation-induced protein thermal stability changes, with the following core innovations:
+
+1) A multiplex heterogeneous residue graph is introduced for protein representation learning, where multiple relation-specific graph layers are constructed over the same residue node set to capture complementary residue relationships, including sequential proximity relations, spatial contact relations, and K-nearest-neighbor relations.
+
+2) A hierarchical gating module is proposed to achieve an effective information filtering. In combination with the multiplex heterogeneous graph, an \emph{inter-relation gating} adaptively controls the contribution of each relation-specific graph layer during heterogeneous information fusion. In addition, an \emph{intra-relation gating} is introduced to suppress noises at the feature level.
+
+3) A self-distillation strategy is devised to amplify the faint signal of mutation. We consider that the representations from deep layers have already contained task-specified information; therefore, they are utilized naturally as soft labels to guide the optimization of shallow layers. These labels act as an auxiliary supervision to amplify the weak signal in this particular task.
+
+\section{Materials and Methods}
+\label{sec:materials}
+
+\subsection{Datasets}
+\label{subsec:datasets}
+
+\subsubsection{Training set: the S2648 dataset}
+\label{subsubsec:s2648}
+
+Our training dataset is based on the well-known and widely used S2648 dataset, which contains 2648 mutants from 131 globular proteins collected from the ProTherm database \cite{Bava2004}. In this dataset, there are 2080 destabilizing mutations and 568 stabilizing mutations. To balance the numbers of destabilizing and stabilizing mutations during training, we explicitly generate reverse mutations in the training set. As a result, the single-point mutation dataset consists of 2648 direct mutations and 2648 corresponding reverse mutations. We perform the 5-fold cross-validation on this dataset, and the results on five folds are averaged. The trained model with the best average performance is selected for the subsequent test process.
+
+\subsubsection{Test set}
+\label{subsubsec:testset}
+
+S350: A dataset compiled by \cite{Dehouck2009}, consisting of 350 single-point mutations from 67 proteins.
+
+S605: A dataset compiled from the ProTherm database by \cite{Broom2017}, comprising 605 mutations from 58 proteins. This dataset was originally used as the training set for the Meta-predictor method \cite{Broom2017}.
+
+S1925: A dataset consisting of 1,925 mutations from 55 proteins, evenly distributed across the four major SCOP structural classes. It was used as the training dataset for the AUTOMUTE method \cite{Masso2008}.
+
+P53: A dataset containing 42 mutations located in the DNA-binding domain of the p53 protein, all of which have experimentally determined thermodynamic stability changes \cite{Pires2014_a}.
+
+Ssym: A manually curated dataset compiled by \cite{Pucci2018}, containing 684 mutations, including an equal number of forward and reverse mutations, with crystal structures available for the corresponding mutant proteins.
+
+S250: A dataset proposed by \cite{Fang2020}, consisting of an equal number of forward and reverse mutations from nine proteins, for which both wild-type and mutant structures are available.
+
+Myoglobin: A dataset comprising experimentally determined stability changes for 134 mutations from sperm whale myoglobin \cite{Kepp2015_a}. Six high-resolution crystal structures of myoglobin were used for stability-related energy calculations.
+
+S879: A benchmark dataset integrated by ThermoAGT-GA \cite{Madani2024_a} from S605, S1925, P53, Ssym, and S250, consisting of 879 protein mutations with less than 15\% sequence identity.
+
+For all datasets, protein structures were obtained as follows: wild-type protein structures were downloaded from the Protein Data Bank (PDB), while mutant protein structures were generated using the Rosetta \cite{Alford2017_a} FastRelax protocol, with the corresponding wild-type structures serving as templates.
+
+\subsection{Problem Statement}
+\label{subsec:problem}
+
+Given a pair of wild-type and mutant proteins $\left( P^{\text{wt}},P^{\text{mt}} \right)$, the $\Delta\Delta G$ prediction problem is formulated as a regression task that aims to estimate the mutation-induced change in protein thermal stability.
+
+For each protein pair, we construct two multiplex heterogeneous residue graphs corresponding to the wild-type and mutant structures. Each graph is defined as $\mathcal{G} = \{\mathcal{V},\mathcal{E},\mathcal{R}\}$, where $\mathcal{V}$ denotes the set of residue nodes, $\mathcal{E}$ represents the set of edges, and $\mathcal{R} = \{ \text{sequential},\text{spatial},\text{KNN}\}$ denotes the predefined set of relation types. Accordingly, the wild-type and mutant graphs are denoted as $\mathcal{G}^{\text{wt}} = \{\mathcal{V}^{\text{wt}},\mathcal{E}^{\text{wt}},\mathcal{R}^{\text{wt}}\}$ and $\mathcal{G}^{\text{mt}} = \{\mathcal{V}^{\text{mt}},\mathcal{E}^{\text{mt}},\mathcal{R}^{\text{mt}}\}$.
+
+Overall, our task is to train a model that takes $\mathcal{G}^{\text{wt}}$ and $\mathcal{G}^{\text{mt}}$ as inputs and learns to generate a value $\Delta\Delta G_{\text{pred}}$ as prediction of the experimentally measured stability change $\Delta\Delta G$.
+
+\subsection{Descriptor of the Input Protein}
+\label{subsec:descriptor}
+
+This section details the construction methods of the aforementioned input descriptors for the $\Delta\Delta G$ prediction task.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig1.png}}
+\caption{Construction of the Multiplex Heterogeneous Graph for Protein Mutations.}
+\label{fig:1}
+\end{figure}
+
+\subsubsection{Construction of multiplex heterogeneous graph}
+\label{subsubsec:mhg}
+
+Protein residue mutations can induce structural alterations in proteins. Most existing methods rely on the contact relations among residues to build the graph topology, while neglecting other abundant relations like sequential adjacency or relative spatial proximity. To remedy this issue, we propose to construct multiplex heterogeneous graphs of protein mutation that capture protein structural changes from multiple perspectives, as illustrated in Fig.~\ref{fig:1}. Specifically, residues within a 12~\AA{} radius of the mutated site are extracted to construct a localized graph, where three types of naturally occurring protein relations are explicitly modeled.
+
+\textit{(i) Sequential relations.} This type reflects the homology information in protein sequences. It is captured by defining edges that connect a target residue with its immediately preceding and succeeding residues along the protein sequence. Accordingly, the sequential graphs are denoted as $\mathcal{G}_{\text{seq}}^{\text{wt}} = \{\mathcal{V}^{\text{wt}},\mathcal{E}_{\text{seq}}^{\text{wt}}\},\ \mathcal{G}_{\text{seq}}^{\text{mt}} = \{\mathcal{V}^{\text{mt}},\mathcal{E}_{\text{seq}}^{\text{mt}}\}$. Two residues are connected if they are adjacent in the sequence:
+\begin{equation}
+(i,j) \in \mathcal{E}_{\text{seq}}\ \text{if}\  \lvert i - j \rvert = 1
+\label{eq:seq}
+\end{equation}
+where $i$ and $j$ denote the residue indices along the protein sequence.
+
+\textit{(ii) Spatial contact relations.} This relation type describes the conventional residue contact known as contact maps. It is a rigid topology based on the absolute distance between the C$\alpha$ atoms of two residues. Accordingly, the spatial contact graphs are denoted as $\mathcal{G}_{\text{spatial}}^{\text{wt}} = \{\mathcal{V}^{\text{wt}},\mathcal{E}_{\text{spatial}}^{\text{wt}}\},\ \mathcal{G}_{\text{spatial}}^{\text{mt}} = \{\mathcal{V}^{\text{mt}},\mathcal{E}_{\text{spatial}}^{\text{mt}}\}$. Two residues are connected if the Euclidean distance between their $C_{\alpha}$ atoms is smaller than a predefined distance threshold $\theta$:
+\begin{equation}
+(i,j) \in \mathcal{E}_{\text{spatial}}\ \text{if}\ \lVert \bm{c}_{i} - \bm{c}_{j} \rVert_{2} < \theta
+\label{eq:spatial}
+\end{equation}
+where $\bm{c}_{i}$ and $\bm{c}_{j}$ denote the coordinates of the $C_{\alpha}$ atoms of residues $i$ and $j$, respectively.
+
+\textit{(iii) K-nearest neighbor relations.} It is also a relation in terms of spatial aspect. However, it differs from spatial contacts in that it captures \emph{relative} spatial proximity rather than a rigid distance threshold, i.e., the $K$ closest neighboring residues are connected with the center target residue. Accordingly, the K-nearest neighbor graphs are denoted as $\mathcal{G}_{\text{KNN}}^{\text{wt}} = \{\mathcal{V}^{\text{wt}},\mathcal{E}_{\text{KNN}}^{\text{wt}}\}$, $\mathcal{G}_{\text{KNN}}^{\text{mt}} = \{\mathcal{V}^{\text{mt}},\mathcal{E}_{\text{KNN}}^{\text{mt}}\}$, where $\mathcal{E}_{\text{KNN}}$ connects each residue to its $K$ spatially closest residues based on the Euclidean distance between $C_{\alpha}$ atoms:
+\begin{equation}
+(i,j) \in \mathcal{E}_{\text{KNN}}\ \text{if}\ j \in \mathcal{N}_{K}(i)
+\label{eq:knn}
+\end{equation}
+where $\mathcal{N}_{K}(i)$ denotes the set of $K$ nearest neighboring residues of residue $i$ in three-dimensional space.
+
+To unify the above three heterogeneous graphs into a single multiplex heterogeneous graph, we represent the overall graph as $\mathcal{G} = \{\mathcal{V},\mathcal{E},\mathcal{R}\}$, where $\mathcal{R}$ denotes the set of relation types, or each edge is associated with a relation label $r_{i,j} \in \mathcal{R}$. The multiplex heterogeneous graphs for wild-type and mutant proteins are denoted as $\mathcal{G}^{\text{wt}} = \{\mathcal{V}^{\text{wt}},\mathcal{E}^{\text{wt}},\mathcal{R}^{\text{wt}}\}$ and $\mathcal{G}^{\text{mt}} = \{\mathcal{V}^{\text{mt}},\mathcal{E}^{\text{mt}},\mathcal{R}^{\text{mt}}\}$, respectively.
+
+\subsubsection{Descriptor of residue nodes}
+\label{subsubsec:nodes}
+
+After constructing the heterogeneous adjacency relations, we further build the residue node descriptor. In general, the node descriptor is a vector of 80 dimensions containing the following components. (i) Amino acid encoding. It includes a 5-dimension representation from skip-gram model \cite{Lv2021}, a 7-dimension one-hot vector according to the amino acid classification, and an 8-dimension vector summarizing several basic biophysical properties of a single residue. (ii) Energy encoding, which is a 20-dimensional representation derived from the Rosetta scoring function \cite{Alford2017_a}, including physics-based energy terms (van der Waals interactions, solvation, hydrogen bonding) and knowledge-based energy terms (protein backbone, side-chain, and torsional components). (iii) Evolutionary encoding, which is a 20-dimensional feature obtained from multiple sequence alignments generated by HHblits \cite{Remmert2012} against the UniClust\_30 database \cite{Mirdita2017}. (iv) Position-specific scoring matrix (PSSM). It is a 20-dimensional feature computed by PSI-BLAST against the Swiss-Prot database, which quantify amino acid preferences at each sequence position and provide information on protein family conservation and evolutionary constraints.
+
+Formally, the initial feature matrix of the residue nodes is denoted as $\bm{X} \in \mathbb{R}^{N \times d}$, where $N = \lvert \mathcal{V} \rvert$ is the number of residues in the local microenvironment, and $d = 80$ denotes the feature dimension after concatenating the above four types of encodings.
+
+\subsection{The Framework of HierGate}
+\label{subsec:framework}
+
+An overview of the HierGate deep learning model is illustrated in Fig.~\ref{fig:2}. HierGate consists of three main components: (i) multiplex heterogeneous graph construction, (ii) a hierarchical gated multiplex heterogeneous graph neural network, and (iii) a self-distillation module with deep-layer labels.
+
+\begin{figure*}[!t]
+\centerline{\includegraphics[width=\textwidth]{media/fig2.png}}
+\caption{Model architecture of HierGate. (a) Schematic illustration of the multiplex heterogeneous graph construction (left) and the self-distillation module (right). (b) Overview of the hierarchical gated multiplex heterogeneous graph neural network.}
+\label{fig:2}
+\end{figure*}
+
+\subsubsection{Hierarchically gated multiplex heterogeneous graph neural network}
+\label{subsubsec:hgmh}
+
+To aggregate the abundant structural information in the multiplex heterogeneous protein graphs, we adopt a hierarchical framework where three relations are decoupled first and learned separately before they are fused to the final representation. Meanwhile, since the mutation signal is subtle and easily overwhelmed by noisy contextual information, we adopt a hierarchical gating mechanism here to suppress the noise.
+
+\paragraph{\textit{Intra-relation gating} mechanism}
+
+To capture complex biophysical interactions within the protein microenvironment, node features are first projected into a latent space. For the node set $\mathcal{V}$ in graph $\mathcal{G}$, the initial representation $\bm{h}_{i}^{(0)}$ is obtained via a linear transformation of the input features $\bm{x}_{i}$ of the residue node $i$:
+\begin{equation}
+\bm{h}_{i}^{(0)} = \bm{W}_{\text{in}}\bm{x}_{i} + \bm{b}_{\text{in}}
+\label{eq:embed}
+\end{equation}
+where $\bm{W}_{\text{in}}$ is a learnable embedding matrix.
+
+At the $l$-th layer, for each heterogeneous graph channel $r \in \mathcal{R}$, the model aggregates neighborhood information from the corresponding multiplex graph layer. Specifically, the candidate message vector $\bm{m}_{i}^{(r,l)}$ is computed as:
+\begin{equation}
+\bm{m}_{i}^{(r,l)} = \sum_{j \in \mathcal{N}_{i}^{(r)}}\frac{1}{\lvert \mathcal{N}_{i}^{(r)} \rvert}\bm{W}_{r}^{(l)}\bm{h}_{j}^{(l)}
+\label{eq:message}
+\end{equation}
+where $\lvert \mathcal{N}_{i}^{(r)} \rvert$ denotes the cardinality of the relation-specific neighborhood. This formulation performs neighborhood aggregation followed by a relation-specific linear transformation.
+
+Given the heterogeneity across relations, we further introduce a relation-conditioned channel-wise gating mechanism (RC-Gate) to perform feature-level multiplicative modulation. For each relation $r$, a dynamic modulation factor $\bm{g}_{i}^{(r,l)}$ is computed as:
+\begin{equation}
+\bm{g}_{i}^{(r,l)} = \sigma\left( \bm{W}_{g,r}^{(l)}\bm{m}_{i}^{(r,l)}+\bm{b}_{g,r}^{(l)} \right)
+\label{eq:gate}
+\end{equation}
+where $\bm{W}_{g,r}^{(l)}$ and $\bm{b}_{g,r}^{(l)}$ are relation-specific parameters, and $\sigma$ denotes the sigmoid activation function.
+
+Finally, the candidate message is modulated via element-wise multiplication to obtain the refined relational feature:
+\begin{equation}
+{\widetilde{\bm{h}}}_{i}^{(r,l)} = \bm{g}_{i}^{(r,l)} \odot \bm{m}_{i}^{(r,l)}
+\label{eq:refine}
+\end{equation}
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig3.png}}
+\caption{\textit{Intra-relation gating Module}. Applies relation-specific channel attention to modulate intra-relation features.}
+\label{fig:3}
+\end{figure}
+
+\paragraph{\textit{Inter-relation gating} mechanism}
+
+After completing intra-relation feature modulation, the model further integrates the \emph{inter-relation gating} to dynamically differentiate the importance of different relations. In addition to the predefined three types, i.e., sequential, spatial, and KNN relations, we extend the relation sets by adding a set of auxiliary virtual relation types. These virtual relations do not correspond to any actual residue-residue interactions or edges in the graph and are not involved in message passing. Instead, they are introduced solely to expand the normalization space of attention, thereby providing additional capacity for probability mass allocation during attention computation. The extended relation set is denoted as $\mathcal{R}_{\text{all}} = \mathcal{R} \cup \mathcal{R}_{\text{virt}}$.
+
+Based on this formulation, for each residue $i$ under relation $r \in \mathcal{R}_{\text{all}}$, with representation ${\widetilde{\bm{h}}}_{i}^{(r,l)}$, the attention score is computed as:
+\begin{equation}
+e_{i,r} = \bm{v}_{\text{att}}^{\top}{\tanh}\left( \bm{W}_{\text{att}}{\widetilde{\bm{h}}}_{i}^{(r,l)}+\bm{b}_{\text{att}} \right)
+\label{eq:attn_score}
+\end{equation}
+where $\bm{W}_{\text{att}}$, $\bm{v}_{\text{att}}$, and $\bm{b}_{\text{att}}$ are shared across all relations to ensure comparability among different relation types. The attention weights are then obtained by applying a Softmax function over the raw attention scores:
+\begin{equation}
+\alpha_{i,r} = \frac{\exp(e_{i,r})}{\sum_{r' \in \mathcal{R}_{\text{all}}}{\exp}(e_{i,r'})}
+\label{eq:attn_weight}
+\end{equation}
+
+During feature updating, only real relation branches are aggregated with attention weights, combined with a residual connection to preserve the original node representation:
+\begin{equation}
+\bm{h}_{i}^{(l+1)} = \sigma\left( \sum_{r \in \mathcal{R}}\alpha_{i,r}{\widetilde{\bm{h}}}_{i}^{(r,l)}+\bm{W}_{0}^{(l)}\bm{h}_{i}^{(l)} \right)
+\label{eq:update}
+\end{equation}
+
+It is worth noting that virtual relations are involved only in the computation of attention weights and are excluded from feature aggregation. This design enables adaptive weighting across relation types while suppressing contributions from less informative signals at the residue level, thereby improving robustness in modeling mutation-induced structural variations.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig4.png}}
+\caption{\textit{Inter-relation gating Module}. Attention weights are computed across different relation types and used for weighted feature fusion.}
+\label{fig:4}
+\end{figure}
+
+At each layer $l$, the node representations are used to extract mutation-aware features for downstream prediction. Specifically, given the node embeddings $\bm{H}_{\text{wt}}^{(l)},\bm{H}_{\text{mt}}^{(l)}$ for the wild-type and mutant proteins at layer $l$, respectively, we obtain the mutation-specific representations by selecting the embedding corresponding to the mutated residue:
+\begin{equation}
+\bm{p}_{\text{wt}}^{(l)} = S\left( \bm{H}_{\text{wt}}^{(l)},i_{\text{mt}} \right),\quad \bm{p}_{\text{mt}}^{(l)} = S\left( \bm{H}_{\text{mt}}^{(l)},i_{\text{mt}} \right)
+\label{eq:select}
+\end{equation}
+where $i_{\text{mt}}$ denotes the index of the mutated residue, and $S(\cdot,i_{\text{mt}})$ represents a deterministic selection operation that extracts the corresponding node embedding.
+
+To explicitly capture the structural differences induced by mutation, we compute the feature difference between the wild-type and mutant representations at each layer, and the resulting difference vector is then fed into a layer-specific prediction function to produce the output at layer $l$:
+\begin{equation}
+\Delta\Delta G_{\text{pred}}^{(l)} = f^{(l)}\left( \bm{p}_{\text{wt}}^{(l)} - \bm{p}_{\text{mt}}^{(l)} \right)
+\label{eq:predict}
+\end{equation}
+where $\Delta\Delta G_{\text{pred}}^{(l)}$ denotes the predicted $\Delta\Delta G$ at layer $l$, and $f^{(l)}(\cdot)$ is implemented as a fully connected layer. The prediction from the deepest layer $L$ is treated as the final output, while intermediate predictions are used for auxiliary supervision and self-distillation during training.
+
+\subsubsection{Self-Distillation Module Guided by Deep Representations}
+\label{subsubsec:distill}
+
+Our model takes protein structures before and after mutation as inputs, enabling the model to learn the topological information of proteins. However, out of hundreds of residues, only one residue differs between the wild-type and mutant sequences. Therefore, the overall feature variation caused by mutation is subtle. This is also evidenced by visualization results from commonly used mutation structure modeling tools (e.g., FoldX and Rosetta), where only minor local geometric perturbations are introduced in single-point mutation scenarios. As a result, mutation signals are weak and sparsely distributed relative to the global structural context, making them prone to being overwhelmed during deep message passing.
+
+To address this issue and effectively enhance the model's ability to capture subtle feature differences induced by protein mutations, we propose a self-distillation method for graph neural networks, in which deep representations are used to guide shallow representations. Particularly, the overall architecture consists of five graph neural network layers, with a prediction head attached after each layer. Each prediction head is composed of a mutant node feature extraction layer, a feature difference layer, and a fully connected layer. The first four prediction heads are used only during training and can be removed during inference. The pooling layer performs mutation-node feature pooling to extract the features of the mutated node after each message-passing layer. The feature difference layer computes the feature differences of the mutated node before and after mutation, and the fully connected layer outputs the final prediction. During training, each shallow prediction head is treated as a student model, while the prediction of the deepest prediction head is treated as the teacher signal for all shallow prediction heads, thereby enabling self-distillation.
+
+To train the self-distillation network, we introduce two sources of mean squared error (MSE) loss upon training. The first loss term is the MSE between predictions and ground-truth labels. Note that in addition to the final prediction from the deepest layer, the predictions from all shallow prediction heads are also supervised by the ground-truth labels. In this way, the knowledge implicitly contained in the dataset is directly introduced to all prediction heads through label supervision. The above process is formulated as:
+\begin{equation}
+\text{MSE}(y,\widehat{y}) = \frac{1}{N}\sum_{i = 1}^{N}(y_{i} - {\widehat{y}}_{i})^{2}
+\label{eq:mse}
+\end{equation}
+
+\begin{multline}
+\text{Loss}_{1} = \lambda \cdot \text{MSE}\left( \Delta\Delta G_{\text{true}},\Delta\Delta G_{\text{pred}}^{(L)} \right) \\
++ (1 - \lambda) \cdot \sum_{l = 1}^{L - 1}{\text{MSE}}\left( \Delta\Delta G_{\text{true}},\Delta\Delta G_{\text{pred}}^{(l)} \right)
+\label{eq:loss1}
+\end{multline}
+
+where $\Delta\Delta G_{\text{true}}$ denotes the ground-truth label, $\Delta\Delta G_{\text{pred}}^{(L)}$ denotes the teacher prediction from the deepest layer, $\Delta\Delta G_{\text{pred}}^{(l)}$ denotes the prediction of the $l$-th student prediction head, and $\lambda$ is a balance coefficient that controls the weighting between the supervised loss of the deepest (teacher) prediction head and that of the shallow (student) prediction heads.
+
+The second is the MSE between the output-level predictions of the teacher and student prediction heads. This loss measures the discrepancy between the predictions of the student prediction heads and the teacher prediction head. Here we define the deepest layer as the teacher model, which is formulated as:
+\begin{equation}
+\text{Loss}_{2} = \sum_{l = 1}^{L - 1}{\text{MSE}}\left( \Delta\Delta G_{\text{pred}}^{(L)},\Delta\Delta G_{\text{pred}}^{(l)} \right)
+\label{eq:loss2}
+\end{equation}
+
+Finally, the total loss is defined as the sum of the above two loss terms:
+\begin{equation}
+\text{Loss} = \text{Loss}_{1} + \text{Loss}_{2}
+\label{eq:total_loss}
+\end{equation}
+
+\subsection{Evaluation Metrics}
+\label{subsec:metrics}
+
+To evaluate the performance of different approaches, we adopt several well-established metrics. Let $y_{\text{true}} = \{ y_{\text{true},i}\}_{i = 1}^{N}$ and $y_{\text{pred}} = \{ y_{\text{pred},i}\}_{i = 1}^{N}$ denote the experimental and predicted $\Delta\Delta G$ values, respectively. The Pearson correlation coefficient (PCC) between $y_{\text{true}}$ and $y_{\text{pred}}$ is defined as:
+\begin{multline}
+\text{PCC}(y_{\text{true}},y_{\text{pred}}) = \\
+\frac{\sum_{i = 1}^{N}(y_{\text{true},i} - \bar{y}_{\text{true}})(y_{\text{pred},i} - \bar{y}_{\text{pred}})}{\sqrt{\sum_{i = 1}^{N}(y_{\text{true},i} - \bar{y}_{\text{true}})^{2}}\sqrt{\sum_{i = 1}^{N}(y_{\text{pred},i} - \bar{y}_{\text{pred}})^{2}}}
+\label{eq:pcc}
+\end{multline}
+where $\bar{y}_{\text{true}}$ and $\bar{y}_{\text{pred}}$ denote the mean values of $y_{\text{true}}$ and $y_{\text{pred}}$, respectively.
+
+The root mean square error (RMSE) between $y_{\text{true}}$ and $y_{\text{pred}}$ is defined as:
+\begin{equation}
+\text{RMSE} = \sqrt{\frac{1}{N}\sum_{i = 1}^{N}(y_{\text{true},i} - y_{\text{pred},i})^{2}}
+\label{eq:rmse}
+\end{equation}
+
+For the anti-symmetry assessment, we denote $y_{\text{pred}}^{\text{dir}}$ and $y_{\text{pred}}^{\text{inv}}$ as the predicted $\Delta\Delta G$ values for direct and corresponding reverse mutations, respectively. The Pearson correlation between $y_{\text{pred}}^{\text{dir}}$ and $y_{\text{pred}}^{\text{inv}}$ is defined as:
+\begin{equation}
+R_{fr}= \text{PCC}\left( y_{\text{pred}}^{\text{dir}},y_{\text{pred}}^{\text{inv}} \right)
+\label{eq:rdr}
+\end{equation}
+
+The anti-symmetry bias $\langle\delta\rangle$ is defined as:
+\begin{equation}
+\left\langle \delta \right\rangle = \frac{1}{2N}\sum_{i = 1}^{N}\left( y_{\text{pred},i}^{\text{dir}} + y_{\text{pred},i}^{\text{inv}} \right)
+\label{eq:bias}
+\end{equation}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Model Performance on Training and Common Test Sets}
+\label{subsec:perf}
+
+We compare our model with previously reported state-of-the-art methods and evaluate its predictive performance by computing the average metrics across all test sets using five-fold cross-validation. Table~\ref{tab:perf} presents the performance of the HierGate model on seven commonly used test sets and the S879 dataset, in comparison with nine existing sequence- and structure-based thermostability predictors, including ThermoAGT-GA \cite{Madani2024_a}, SCONES \cite{Samaga2021}, PremPS \cite{Chen2020_a}, mCSM \cite{Pires2014_a}, PoPMuSiC \cite{Dehouck2011_a}, FoldX \cite{Guerois2002_a}, SAAFEC-SEQ \cite{Li2021}, PROST \cite{Iqbal2022}, and DeepDDG \cite{Cao2019}.
+
+In terms of both PCC and RMSE, our model outperforms existing methods on the majority of the datasets. On the S605 test set, compared with the best-performing baseline, our model achieves an improvement of approximately 16\% in PCC (0.826) and a reduction of 14\% in RMSE (1.196). On the S1925 dataset, our model attains the lowest RMSE (1.169) and the highest PCC (0.778). On the widely used Ssym test set, the model also achieves notable improvements in both PCC and RMSE.
+
+On the single-protein multi-mutation test sets, P53 and Myoglobin, the proposed model likewise demonstrates competitive predictive performance. For example, on the Myoglobin test set, our model achieves a PCC of 0.690 and an RMSE of 0.756, outperforming representative methods such as ThermoAGT-GA (PCC = 0.673) and FoldX (RMSE = 0.770). These results indicate that the predictor based on a hierarchically gated multiplex heterogeneous graph neural network performs well in predicting protein thermal stability changes.
+
+\begin{table*}[!t]
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Performance of HierGate and Other Baseline Models Across Eight Test Sets}
+\label{tab:perf}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccccccccccccc}
+\toprule
+& \multicolumn{2}{c}{S350} & \multicolumn{2}{c}{S605} & \multicolumn{2}{c}{S1925} & \multicolumn{2}{c}{Myoglobin}
+& \multicolumn{2}{c}{P53} & \multicolumn{2}{c}{Ssym} & \multicolumn{2}{c}{S250} & \multicolumn{2}{c}{S879} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\cmidrule(lr){10-11} \cmidrule(lr){12-13} \cmidrule(lr){14-15} \cmidrule(lr){16-17}
+Method & PCC & RMSE & PCC & RMSE & PCC & RMSE & PCC & RMSE
+      & PCC & RMSE & PCC & RMSE & PCC & RMSE & PCC & RMSE \\
+\midrule
+HierGate (ours)      & \textbf{0.956} & \textbf{0.548} & \textbf{0.826} & \textbf{1.196} & \textbf{0.778} & \textbf{1.169} & \textbf{0.690} & \textbf{0.756}
+              & \textbf{0.771} & \textbf{1.304} & \textbf{0.872} & \textbf{0.927} & \textbf{0.908} & \textbf{0.814} & 0.775 & \textbf{1.383} \\
+ThermoAGT-GA  & \underline{0.882} & \underline{0.899} & \underline{0.712} & \underline{1.394} & \underline{0.738} & \underline{1.421} & 0.673 & 0.776
+              & \underline{0.763} & 1.479 & \underline{0.848} & \underline{1.095} & \underline{0.907} & \underline{0.989} & \textbf{0.823} & \underline{1.405} \\
+PremPS        & 0.794 & 0.974 & 0.648 & 1.541 & 0.689 & 1.572 & 0.657 & 0.794
+              & 0.754 & 1.478 & 0.782 & 1.254 & 0.823 & 1.136 & \underline{0.792} & 1.443 \\
+SCONES        & 0.769 & 1.107 & 0.599 & 1.693 & 0.624 & 1.704 & 0.620 & 0.846
+              & 0.727 & 1.543 & 0.718 & 1.555 & 0.743 & 1.324 & 0.664 & 1.678 \\
+FoldX         & 0.802 & 0.937 & 0.685 & 1.430 & 0.716 & 1.456 & \underline{0.678} & \underline{0.770}
+              & 0.759 & \underline{1.432} & 0.772 & 1.274 & 0.867 & 1.048 & 0.593 & 1.899 \\
+PoPMuSiC      & 0.723 & 1.112 & 0.627 & 1.602 & 0.662 & 1.569 & 0.653 & 0.789
+              & 0.702 & 1.509 & 0.743 & 1.330 & 0.765 & 1.294 & 0.702 & 1.633 \\
+SAAFEC-SEQ    & 0.639 & 1.241 & 0.483 & 1.886 & 0.521 & 1.808 & 0.593 & 0.904
+              & 0.649 & 1.629 & 0.684 & 1.623 & 0.729 & 1.382 & 0.479 & 2.291 \\
+PROST         & 0.668 & 1.209 & 0.509 & 1.764 & 0.594 & 1.722 & 0.622 & 0.843
+              & 0.674 & 1.593 & 0.592 & 1.883 & 0.722 & 1.389 & 0.503 & 2.103 \\
+mCSM          & 0.745 & 1.050 & 0.602 & 1.683 & 0.642 & 1.673 & 0.619 & 0.857
+              & 0.736 & 1.528 & 0.664 & 1.649 & 0.790 & 1.220 & 0.559 & 2.032 \\
+DeepDDG       & 0.698 & 1.182 & 0.564 & 1.729 & 0.658 & 1.669 & 0.603 & 0.872
+              & 0.709 & 1.549 & 0.689 & 1.608 & 0.748 & 1.343 & 0.622 & 1.837 \\
+\bottomrule
+\end{tabular*}
+\smallskip
+
+\raggedright\footnotesize Optimal results are shown in \textbf{bold}, and sub-optimal results are indicated by \underline{underlining}.
+\end{table*}
+
+To facilitate visual comparison, the experimental and predicted values across the eight test sets are presented in Fig.~\ref{fig:5}. As shown in the figure, the predicted values closely align with the experimentally measured values, particularly for the S350 and S250 datasets, demonstrating the model's consistent predictive performance.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig5.png}}
+\caption{The performance of the model across eight datasets is presented as a scatter plot.}
+\label{fig:5}
+\end{figure}
+
+The violin plots in Fig.~\ref{fig:6} illustrate that the predicted values align well with the experimentally assessed thermodynamic changes, forming a distribution that morphologically close to the actual distribution. Besides, the model performs well around those cases with $\Delta\Delta G$ near to 0, indicating the capability of capturing mutations with small thermodynamic effect.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig6.png}}
+\caption{Violin plots comparing experimental and predicted $\Delta\Delta G$ values across eight datasets.}
+\label{fig:6}
+\end{figure}
+
+\subsection{Evaluation of Anti-Symmetry Ability by HierGate}
+\label{subsec:antisym}
+
+We investigate the thermodynamic anti-symmetry of the model by evaluating its performance on symmetric datasets. Specifically, we conduct experiments on the Ssym and S250 symmetry datasets, both of which contain forward mutations and their corresponding reverse mutations measured under identical experimental conditions. The evaluation results are shown in Table~\ref{tab:antisym}. According to the experimental results, our method demonstrates strong performance on both datasets. Specifically, HierGate achieved a PCC score of 0.864 on both reverse and direct cases of S250, which was substantially better than that of the second-best model (0.814 and 0.820). Similarly, the performance gains were also apparent on Ssym over other baselines.
+
+\begin{table*}[!t]
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Model Performance on Direct and Reverse Mutations to Evaluate Anti-Symmetric Thermodynamic Properties}
+\label{tab:antisym}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccccccccc}
+\toprule
+& \multicolumn{6}{c}{S250} & \multicolumn{6}{c}{Ssym} \\
+\cmidrule(lr){2-7} \cmidrule(lr){8-13}
+& \multicolumn{2}{c}{Reverse} & \multicolumn{2}{c}{Direct} & \multicolumn{2}{c}{Antisymmetry}
+& \multicolumn{2}{c}{Reverse} & \multicolumn{2}{c}{Direct} & \multicolumn{2}{c}{Antisymmetry} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\cmidrule(lr){8-9} \cmidrule(lr){10-11} \cmidrule(lr){12-13}
+Method & PCC & RMSE & PCC & RMSE & $R_{fr}$ & $\langle\delta\rangle$
+       & PCC & RMSE & PCC & RMSE & $R_{fr}$ & $\langle\delta\rangle$ \\
+\midrule
+HierGate (ours)      & \textbf{0.864} & \textbf{0.815} & \textbf{0.864} & \textbf{0.815} & $\bm{-1.000}$ & $\bm{-0.005}$
+              & \textbf{0.812} & \textbf{0.927} & \textbf{0.812} & \textbf{0.926} & $\bm{-1.000}$ & $\bm{-0.001}$ \\
+ThermoAGT-GA  & \underline{0.814} & \underline{1.228} & 0.820 & 1.189 & $\underline{-0.98}$ & $\underline{-0.03}$
+              & \underline{0.797} & \underline{1.128} & \underline{0.802} & \underline{1.107} & $\underline{-0.98}$ & $\underline{-0.03}$ \\
+PremPS        & 0.729 & 1.403 & 0.768 & 1.219 & $-$0.88 & $-$0.14
+              & 0.741 & 1.332 & 0.764 & 1.291 & $-$0.91 & $-$0.10 \\
+SCONES        & 0.639 & 1.573 & 0.663 & 1.473 & $-$0.90 & $-$0.12
+              & 0.653 & 1.563 & 0.693 & 1.443 & $-$0.89 & $-$0.16 \\
+FoldX         & 0.653 & 1.539 & \underline{0.841} & \underline{1.100} & $-$0.65 & $-$0.48
+              & 0.632 & 1.644 & 0.734 & 1.389 & $-$0.68 & $-$0.46 \\
+PoPMuSiC      & 0.620 & 1.567 & 0.686 & 1.447 & $-$0.79 & $-$0.31
+              & 0.619 & 1.723 & 0.709 & 1.430 & $-$0.71 & $-$0.29 \\
+SAAFEC-SEQ    & 0.583 & 1.683 & 0.673 & 1.499 & $-$0.72 & $-$0.40
+              & 0.493 & 1.921 & 0.673 & 1.622 & $-$0.73 & $-$0.27 \\
+PROST         & 0.603 & 1.564 & 0.653 & 1.542 & $-$0.89 & $-$0.12
+              & 0.509 & 1.883 & 0.528 & 1.899 & $-$0.88 & $-$0.16 \\
+mCSM          & 0.778 & 1.283 & 0.723 & 1.427 & $-$0.84 & $-$0.22
+              & 0.617 & 1.342 & 0.649 & 1.399 & $-$0.86 & $-$0.20 \\
+\bottomrule
+\end{tabular*}
+\smallskip
+
+\raggedright\footnotesize Optimal results are shown in \textbf{bold}, and sub-optimal results are indicated by \underline{underlining}.
+\end{table*}
+
+We then assess the anti-symmetry ability of HierGate. Symmetry consistency is traditionally quantified using the correlation coefficient $R_{fr}$ and the mean prediction bias $\delta$, where $R_{fr}$ denotes the correlation between the predicted values of forward mutations and those of their corresponding reverse mutations, and $\delta$ represents the average difference between the two predictions. An ideal method with perfect symmetry consistency would obtain $R_{fr} = -1$ and $\delta = 0$. In this aspect, we evaluate the symmetry properties of the proposed model. The results show that the $R_{fr}$ of model reaches $-1$ on both Ssym and S250 datasets, while $\delta$ equals $-$0.005 and $-$0.001 on S250 and Ssym, respectively, indicating that our model achieves near-perfect symmetry consistency. For comparison, the second-best method ThermoAGT-GA achieved an $R_{fr}$ of $-$0.98 and a $\delta$ of $-$0.03.
+
+By comparing the scatter plots (Fig.~\ref{fig:7}) of forward and reverse mutations on the symmetric dataset, it can be observed that the two exhibit a clear anti-symmetric distribution pattern, which is consistent with the quantitative results of the model on anti-symmetry metrics.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig7.png}}
+\caption{The performance of the model on symmetric datasets is displayed in the form of scatter plots.}
+\label{fig:7}
+\end{figure}
+
+\subsection{Analysis on the Individual Roles of Three Relation Types}
+\label{subsec:relations}
+
+We first conduct an ablation study on multi-relation to analyze their impact on model performance. Table~\ref{tab:ablation_rel} reports the results, where sequence edges, spatial edges, and k-nearest neighbor (KNN) edges are selectively removed or used individually.
+
+\begin{itemize}
+\item \textit{w/o sequential relation}: This variant removes the sequential relation and relies only on spatial and KNN relations for message passing.
+\item \textit{w/o spatial relation}: This variant removes the spatial relation and relies only on sequential and KNN relations for message passing.
+\item \textit{w/o KNN relation}: This variant removes the KNN relation and relies only on sequential and spatial relations for message passing.
+\item \textit{sequence-only relation}: This variant uses only the sequential relation for message passing, discarding spatial and KNN relations.
+\item \textit{spatial-only relation}: This variant uses only the spatial relation for message passing, discarding sequential and KNN relations.
+\item \textit{KNN-only relation}: This variant uses only the KNN relation for message passing, discarding sequential and spatial relations.
+\end{itemize}
+
+The results demonstrate that, for most datasets, feature aggregation based solely on KNN edges can already achieve competitive performance. However, for certain datasets, such as S605, S1925, and S879, the model is more sensitive to sequence and spatial edge modeling. Overall, although KNN edges contribute most substantially to performance, the best predictive accuracy and generalization ability are achieved only when all three types of edge relations are jointly employed.
+
+\begin{table*}[!t]
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Ablation Results on Multi-Relation}
+\label{tab:ablation_rel}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccccccccccccc}
+\toprule
+& \multicolumn{2}{c}{S350} & \multicolumn{2}{c}{S605} & \multicolumn{2}{c}{S1925} & \multicolumn{2}{c}{Myoglobin}
+& \multicolumn{2}{c}{P53} & \multicolumn{2}{c}{Ssym} & \multicolumn{2}{c}{S250} & \multicolumn{2}{c}{S879} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\cmidrule(lr){10-11} \cmidrule(lr){12-13} \cmidrule(lr){14-15} \cmidrule(lr){16-17}
+Variant & PCC & RMSE & PCC & RMSE & PCC & RMSE & PCC & RMSE
+        & PCC & RMSE & PCC & RMSE & PCC & RMSE & PCC & RMSE \\
+\midrule
+HierGate              & \textbf{0.956} & 0.548 & \textbf{0.826} & \textbf{1.196} & 0.778 & 1.169 & \textbf{0.690} & \textbf{0.756}
+                      & 0.771 & 1.304 & 0.872 & 0.927 & \textbf{0.908} & 0.814 & \textbf{0.775} & \textbf{1.383} \\
+w/o sequential rel.   & 0.953 & \textbf{0.508} & 0.823 & 1.221 & 0.781 & 1.169 & 0.681 & 0.761
+                      & \textbf{0.780} & \textbf{1.280} & \textbf{0.873} & \textbf{0.925} & 0.869 & \textbf{0.805} & 0.731 & 1.466 \\
+w/o spatial rel.      & 0.951 & 0.508 & 0.824 & 1.206 & \textbf{0.783} & \textbf{1.163} & 0.689 & 0.756
+                      & 0.770 & 1.303 & 0.868 & 0.939 & 0.908 & 0.818 & 0.734 & 1.458 \\
+w/o KNN rel.          & 0.941 & 0.568 & 0.821 & 1.238 & 0.775 & 1.192 & 0.651 & 0.791
+                      & 0.767 & 1.306 & 0.871 & 0.942 & 0.908 & 0.827 & 0.762 & 1.424 \\
+sequence-only         & 0.938 & 0.562 & 0.815 & 1.224 & 0.765 & 1.191 & 0.656 & 0.816
+                      & 0.746 & 1.300 & 0.869 & 0.931 & 0.905 & 0.824 & 0.717 & 1.486 \\
+spatial-only          & 0.930 & 0.611 & 0.807 & 1.260 & 0.761 & 1.214 & 0.684 & 0.778
+                      & 0.741 & 1.340 & 0.866 & 0.952 & 0.899 & 0.866 & 0.760 & 1.420 \\
+KNN-only              & 0.933 & 0.611 & 0.804 & 1.278 & 0.758 & 1.223 & 0.688 & 0.756
+                      & 0.770 & 1.318 & 0.867 & 0.949 & 0.893 & 0.890 & 0.722 & 1.487 \\
+\bottomrule
+\end{tabular*}
+\smallskip
+
+\raggedright\footnotesize Optimal results are shown in \textbf{bold}.
+\end{table*}
+
+We further conduct a visualization analysis of multi-relation features. Fig.~\ref{fig:8} provides a t-SNE visualization and cosine similarity analysis of edge features derived from sequence, spatial, and KNN relations. In the t-SNE space, features corresponding to the three relation types form clearly separable clusters, indicating that each relation captures distinct structural or contextual information with minimal overlap. This observation is further supported by the relation-wise cosine similarity matrix, where the off-diagonal values remain consistently low (all below 0.1 and the highest is only 0.084), suggesting weak correlation and high complementarity between different edge types. The distribution of pairwise cosine similarities also reveals that most cross-relation similarities are concentrated around low values, far below the predefined threshold, reinforcing the notion that these relations encode heterogeneous information.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig8.png}}
+\caption{Visualization and pairwise similarity analysis of relation-specific features. (a) t-SNE visualization of three relation-specific feature representations. (b) Pairwise cosine similarity matrix among relation-specific features. (c) Distribution of sample-wise cosine similarities between relation pairs.}
+\label{fig:8}
+\end{figure}
+
+\subsection{Analysis of Contributions of Self-Distillation and Hierarchical Gating}
+\label{subsec:ablation}
+
+Ablation Study of Model Components. To quantify the contribution of each component, we conduct ablation experiments across all test sets, as shown in Table~\ref{tab:ablation_mod}.
+
+\begin{itemize}
+\item \textit{w/o self-distillation}: This variant removes the self-distillation module and is trained solely with the mean squared error (MSE) loss.
+\item \textit{w/o inter-relation gating}: This variant removes the inter-relation gating mechanism. Features from different relations are fused via simple averaging.
+\item \textit{w/o intra-relation gating}: This variant removes the intra-relation gating mechanism. The message-passed features are directly used for inter-relation aggregation.
+\item \textit{w/o gate}: This variant removes both inter- and intra-channel gating mechanisms, reducing the model to a basic multiplex heterogeneous graph neural network without hierarchical gating.
+\item \textit{w/o gate \& self-distillation}: This variant removes both the gating mechanisms and the self-distillation module, and is trained using only the MSE loss based on a basic multiplex heterogeneous graph neural network.
+\item \textit{w/o MHGNN}: This variant replaces the multiplex heterogeneous graph neural network backbone with a standard GCN.
+\end{itemize}
+
+The results indicate that, under self-distillation supervision, the model achieves improved predictive performance on the majority of datasets, suggesting that the self-distillation module contributes to improved predictive performance on protein stability changes. S879 and P53 are the two benchmarks benefit most from the self-distillation module. P53 is characterized by a very limited sample size and the mutation signal is relatively weak since it focuses exclusively on mutations within the intrinsically fragile DNA-binding core domain of p53, where mutational effects are highly localized. Incorporating self-distillation increased PCC on P53 from 0.733 to 0.771 (5.2\%), which support the signal-augmentation role of self-distillation. In addition, the module achieved a dramatic PCC enhancement of 10.7\% on S879. As aforementioned, S879 is a mixed benchmark characterized by the low sequence identity. Adding self-distillation forces the model to focus on the mutation signal itself and learn transferable physicochemical relationships rather than memorizing dataset-specific correlations.
+
+For the role of hierarchical gating mechanism, compared with the model using a standard GNN, HierGate consistently shows superior performance across multiple datasets. In particular, the PCC on Myoglobin increased by 5.3\% after the incorporation of hierarchical gating. These observations indicate that the hierarchical gating mechanism benefit the model prediction by further refining the learned representations.
+
+\begin{table*}[!t]
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Ablation Results of the Model on Individual Modules}
+\label{tab:ablation_mod}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lcccccccccccccccc}
+\toprule
+& \multicolumn{2}{c}{S350} & \multicolumn{2}{c}{S605} & \multicolumn{2}{c}{S1925} & \multicolumn{2}{c}{Myoglobin}
+& \multicolumn{2}{c}{P53} & \multicolumn{2}{c}{Ssym} & \multicolumn{2}{c}{S250} & \multicolumn{2}{c}{S879} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\cmidrule(lr){10-11} \cmidrule(lr){12-13} \cmidrule(lr){14-15} \cmidrule(lr){16-17}
+Variant & PCC & RMSE & PCC & RMSE & PCC & RMSE & PCC & RMSE
+        & PCC & RMSE & PCC & RMSE & PCC & RMSE & PCC & RMSE \\
+\midrule
+HierGate                      & \textbf{0.956} & 0.548 & \textbf{0.826} & \textbf{1.196} & 0.778 & 1.169 & \textbf{0.690} & 0.756
+                              & 0.771 & 1.304 & \textbf{0.872} & \textbf{0.927} & 0.908 & 0.814 & 0.775 & \textbf{1.383} \\
+w/o self-distillation         & 0.930 & 0.602 & 0.819 & 1.241 & 0.770 & 1.199 & 0.685 & \textbf{0.754}
+                              & 0.733 & 1.339 & 0.871 & 0.941 & \textbf{0.916} & \textbf{0.792} & 0.700 & 1.526 \\
+w/o inter-relation gating         & 0.953 & \textbf{0.493} & 0.824 & 1.196 & 0.778 & \textbf{1.158} & 0.671 & 0.782
+                              & \textbf{0.775} & \textbf{1.265} & 0.869 & 0.932 & 0.913 & 0.870 & 0.764 & 1.401 \\
+w/o intra-relation gating         & 0.953 & 0.505 & 0.824 & 1.216 & \textbf{0.780} & 1.169 & 0.675 & 0.765
+                              & 0.749 & 1.316 & 0.868 & 0.938 & 0.908 & 0.812 & 0.761 & 1.419 \\
+w/o gate                      & 0.939 & 0.650 & 0.810 & 1.264 & 0.766 & 1.203 & 0.655 & 0.776
+                              & 0.743 & 1.406 & 0.854 & 0.979 & 0.893 & 0.874 & \textbf{0.782} & 1.403 \\
+w/o gate \& self-distillation & 0.927 & 0.704 & 0.804 & 1.280 & 0.751 & 1.232 & 0.670 & 0.761
+                              & 0.720 & 1.443 & 0.854 & 0.987 & 0.886 & 0.903 & 0.750 & 1.452 \\
+w/o MHGNN                       & 0.928 & 0.612 & 0.808 & 1.238 & 0.752 & 1.220 & 0.644 & 0.817
+                              & 0.744 & 1.324 & 0.853 & 0.992 & 0.904 & 0.842 & 0.608 & 1.706 \\
+\bottomrule
+\end{tabular*}
+\smallskip
+
+\raggedright\footnotesize Optimal results are shown in \textbf{bold}.
+\end{table*}
+
+\subsection{HierGate Identifies Mutation Patterns Across Different Mutation Types}
+\label{subsec:muttypes}
+
+Given that investigating $\Delta\Delta G$ patterns across different mutation types is crucial for understanding protein function and guiding protein design, we further evaluated the agreement between HierGate predictions and the experimental $\Delta\Delta G$ distributions across 20 amino acid substitution types. This analysis was conducted on the complete set of test datasets. We quantified mutation counts for each substitution type and observed that valine, isoleucine, leucine, and alanine are the most frequently involved amino acids in the mutations.
+
+As shown in Fig.~\ref{fig:9}, the predicted mutation patterns show good agreement with the experimental distributions. Notably, mutations to glycine predominantly yield positive $\Delta\Delta G$ values, corresponding to reduced thermal stability, whereas mutations to isoleucine are mainly associated with negative $\Delta\Delta G$ values, corresponding to increased thermal stability. In addition, residues were categorized into charged, polar, hydrophobic, and special groups. We observed that mutations originating from charged or polar residues and transitioning to hydrophobic residues predominantly exhibit positive $\Delta\Delta G$ values. Mutations originating from special residues and transitioning to other residue categories also mainly show positive $\Delta\Delta G$ values. In contrast, mutations originating from hydrophobic residues and transitioning to charged or polar residues predominantly exhibit negative $\Delta\Delta G$ values. Overall, the predicted mutation patterns show good agreement with experimental data in terms of the overall distribution of $\Delta\Delta G$, suggesting that our method is capable of modeling mutation-type-dependent $\Delta\Delta G$ patterns.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig9.png}}
+\caption{Analysis of $\Delta\Delta G$ distribution by mutation type: comparison between experimental and predicted values.}
+\label{fig:9}
+\end{figure}
+
+\subsection{Case Analysis of HierGate on Cancer-Related Proteins}
+\label{subsec:cancer}
+
+To showcase the practical application of HierGate in investigating the underlying mechanisms of cancer development, we conducted case analysis on two cancer-related proteins, namely p53 and BRCA1.
+
+The p53 protein is one of the protein products encoded by the tumor suppressor gene TP53. Functional impairment caused by p53 mutations is a major driving factor in many cancers. The p53 protein forms a homotetramer, with each monomer consisting of 393 amino acid residues. Four major functional domains have been well characterized in p53: the N-terminal transactivation domain (TAD), the DNA-binding domain (DBD), the oligomerization domain (OD), and the C-terminal domain (CTD). Large-scale cancer genomic analyses have shown that pathogenic p53 mutations are predominantly concentrated in the DNA-binding domain, particularly in its core region, where approximately 80--90\% of disease-associated mutations are located. This domain is responsible for sequence-specific DNA binding, and mutations within this region can directly disrupt the tumor suppressor function of p53. Moreover, mutations are highly enriched at a small number of recurrent ``hotspot'' residues, accounting for roughly 30\% of mutations in the core domain. Representative hotspot sites include R175, G245, R248, R249, R273, and R282 \cite{Cho1994}.
+
+Considering the critical role of p53 in cancer development, we conducted an in-depth case analysis of the predictive performance of HierGate on p53 mutations. According to the experimental results (Fig.~\ref{fig:10}), HierGate was in general able to capture the stability changes induced by mutations at these common hotspot sites. In addition, we performed exhaustive in silico mutagenesis by introducing all 20 amino acid substitutions at selected positions within the p53 sequence region spanning residues 164--289. This region covers multiple secondary structure elements, including L2 (163--194), H1 (177--180), S5 (195--198), S6 (204--207), S7 (214--219), S8 (230--236), L3 (236--251), S9 (251--258), S10 (264--274), and H2 (278--286). Analysis of the predicted results suggests that mutations associated with decreased thermal stability tend to exhibit spatial clustering within specific regions of the structure. These destabilizing mutations are mainly localized in the $\beta$-sheet core of the p53 DNA-binding domain, as well as in the primary DNA-binding region and the Zn-binding region \cite{Cho1994}. This observation is consistent with the notion that the structural integrity of the p53 DNA-binding domain may be related to the stability changes induced by mutations in its critical functional regions.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig10.png}}
+\caption{(a) Model predictions of p53 hotspot mutations. (b) Heatmap of model predictions for comprehensive mutations across the p53 sequence.}
+\label{fig:10}
+\end{figure}
+
+The next protein we focused on is BRCA1. Breast cancer type 1 susceptibility protein (BRCA1) is a critical tumor suppressor that plays an essential role in DNA damage repair and the maintenance of genomic stability, and is closely associated with multiple cancers, including breast and ovarian cancers. Using our model, we successfully predicted the thermal stability changes induced by the well-characterized pathogenic mutation M1775R, as well as several other commonly reported variants \cite{Petrosino2021_a,Williams2003}. In addition, we systematically evaluated all possible single--amino acid substitutions across residues 1765--1859. The experimental results are visualized in Fig.~\ref{fig:11}.
+
+Analysis of the predicted results shows that destabilizing mutations are not uniformly distributed and tend to cluster in specific structural regions. Mapping these mutations onto secondary structural elements showed that substitutions leading to reduced thermal stability are predominantly enriched in $\beta$-strand regions (e.g., 1765--1769, 1806--1810, 1832--1834) and $\alpha$-helical regions (e.g., 1777--1787, 1820--1827, 1835--1844). In contrast, mutations with minor effects or stabilizing impacts on thermal stability tend to cluster in loop regions. From a structural perspective, mutations occurring at residues within the hydrophobic inter-repeat interface of the BRCT domain (notably 1775--1787) are frequently predicted to be associated with decreased protein stability. Taken together, these results suggest that mutations in $\beta$-strand and $\alpha$-helical regions, as well as key structural support elements of the BRCT domain, are more likely to be associated with reduced thermal stability in the model predictions.
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig11.png}}
+\caption{(a) Model predictions of BRCA1 hotspot mutations. (b) Heatmap of model predictions for comprehensive mutations across the BRCA1 sequence.}
+\label{fig:11}
+\end{figure}
+
+\subsection{Case Analysis of HierGate on Protein Engineering-Related Proteins}
+\label{subsec:engineering}
+
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{media/fig12.png}}
+\caption{(a) Attention analysis of 1O6X. (b) Attention analysis of 2PTL. Mutation sites of the two proteins are highlighted in blue. Residue-level attention scores are visualized, with red indicating higher values. The top three residues are shown in stick representation.}
+\label{fig:12}
+\end{figure}
+
+To further demonstrate the practical application of HierGate in guiding directed evolution in protein engineering, we conducted two additional case studies regarding protein engineering, namely the human procarboxypeptidase A2 and the L-B1 domain protein. Both proteins have been widely used as model systems in studies of protein stability and dynamics \cite{ONeill2001,Glyakina2015,Dantas2007}. Specifically, we analyzed the H51A mutation in human procarboxypeptidase A2 and the A34G mutation in the L-B1 domain protein. In our analysis, we employed the three-dimensional structures of human procarboxypeptidase A2 (PDB ID: 1O6X) and the L-B1 domain protein (PDB ID: 2PTL) obtained from the Protein Data Bank. The mutant structures were generated following the same procedure used during dataset preprocessing.
+
+The structure-based HierGate model predicted the free energy changes of 1O6X-H51A and 2PTL-A34G to be 0.8958 kcal/mol and 1.9796 kcal/mol, respectively, which are in good agreement with the experimentally measured values of 0.7 kcal/mol and 2.1 kcal/mol. These results suggest that HierGate is able to produce reasonable $\Delta\Delta G$ estimates for these representative mutations, indicating its potential utility as a rapid evaluation tool for protein stability assessment.
+
+Furthermore, we performed residue-level attention visualization for 1O6X-H51A and 2PTL-A34G, as illustrated in Fig.~\ref{fig:12}. The results show that residues with high attention scores are predominantly located in $\beta$-sheet and $\alpha$-helical regions and exhibit long-range structural dependencies with the mutation sites. This observation is consistent with the empirical trend reported in Section~\ref{subsec:cancer}, where regions associated with mutation-induced stability decreases tend to overlap with $\beta$-sheet and $\alpha$-helical elements. Such consistency suggests that HierGate tends to assign higher importance to residues within structured secondary elements when modeling protein stability changes, indicating that the model leverages secondary-structure-related features without implying a direct causal interpretation.
+
+\section{Conclusion}
+\label{sec:conclusions}
+
+Accurate prediction of protein thermostability changes induced by residue mutations is crucial for accelerating the development of protein biotechnology and the diagnosis of cancer-related diseases. In this work, we propose a new model named HierGate for protein stability changes. It is featured by the fine depiction of heterogeneous relations and the augmentation of the faint mutation signals. To achieve this, HierGate models the protein with a heterogeneous graph consisting of three relation types, i.e., sequential, spatial, and KNN. We practically show that the hidden representations of three types exhibit clear distinctions with each other, and the highest cosine similarity is only 0.084. These demonstrate the rationality and complementarity of the three relations. Besides, a hierarchical gating module is included to suppress the contextual noise accompanied by the multiple relations. This module contributes to a further refinement of the learned representations, e.g., the PCC on Myoglobin increased by 5.3\% with this design. Finally, we adopt a self-distillation strategy to handle the weak faint mutation signal. This strategy benefits small and single-protein benchmarks like P53, where PCC was increased by 5.2\%. It also improves the model generalizability, as evidenced by the large enhancement of PCC (10.7\%) on S879, a dataset featured by the low sequence identity.
+
+In addition, we perform multiple case studies on cancer-related proteins and proteins relevant to protein engineering. From these analyses, we observe that a tendency for mutations occurring in secondary structure elements located in the protein core to be associated with decreased thermostability. Our model is able to incorporate secondary-structure-related structural context and leverage this information to predict the corresponding thermostability variations. In summary, HierGate is expected to be an effective and efficient computational tool for protein stability prediction under both pathological analysis and protein engineering scenarios.
+
+\bibliographystyle{IEEEtran}
+\section*{References}
+\bibliography{references}
+
+\end{document}

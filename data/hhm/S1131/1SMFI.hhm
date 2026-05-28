@@ -1,0 +1,47 @@
+HHsearch 1.5
+NAME  1SMFI
+FAM   
+COM   hhblits -i /tmp/tmp0mukthcu.fasta -o /dev/null -ohhm /media/ST-18T/nianwen/origin-ucl/data/hhm/S1131/1SMFI.hhm -d /media/ST-18T/nianwen/databases/UniRef30_2020_06/UniRef30_2020_06 -n 3 -cpu 1 
+DATE  Tue Dec  2 21:02:37 2025
+LENG  9 match states, 9 columns in multiple alignment
+
+FILT  1 out of 1 sequences passed filter (-id 90 -cov 0 -qid 0 -qsc -20 -diff 1000)
+NEFF  1.0 
+SEQ
+>Consensus
+ctksippec
+>1SMFI
+CTKSIPPEC
+#
+NULL   3706	5728	4211	4064	4839	3729	4763	4308	4069	3323	5509	4640	4464	4937	4285	4423	3815	3783	6325	4665	
+HMM    A	C	D	E	F	G	H	I	K	L	M	N	P	Q	R	S	T	V	W	Y	
+       M->M	M->I	M->D	I->M	I->I	D->M	D->D	Neff	Neff_I	Neff_D
+       0	*	*	0	*	0	*	*	*	*	
+C 1    *	0	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	1
+       0	*	*	*	*	*	*	1000	0	0	
+
+T 2    *	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	0	*	*	*	2
+       0	*	*	*	*	*	*	1000	0	0	
+
+K 3    *	*	*	*	*	*	*	*	0	*	*	*	*	*	*	*	*	*	*	*	3
+       0	*	*	*	*	*	*	1000	0	0	
+
+S 4    *	*	*	*	*	*	*	*	*	*	*	*	*	*	*	0	*	*	*	*	4
+       0	*	*	*	*	*	*	1000	0	0	
+
+I 5    *	*	*	*	*	*	*	0	*	*	*	*	*	*	*	*	*	*	*	*	5
+       0	*	*	*	*	*	*	1000	0	0	
+
+P 6    *	*	*	*	*	*	*	*	*	*	*	*	0	*	*	*	*	*	*	*	6
+       0	*	*	*	*	*	*	1000	0	0	
+
+P 7    *	*	*	*	*	*	*	*	*	*	*	*	0	*	*	*	*	*	*	*	7
+       0	*	*	*	*	*	*	1000	0	0	
+
+E 8    *	*	*	0	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	8
+       0	*	*	*	*	*	*	1000	0	0	
+
+C 9    *	0	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	*	9
+       0	*	*	0	*	*	*	1000	0	0	
+
+//

@@ -1,0 +1,20 @@
+# Python package requirements for HierGate.
+#
+# Notes:
+# - Install PyTorch according to your CUDA/CPU platform before or with this file.
+# - Install PyTorch Geometric with wheels compatible with your PyTorch/CUDA version.
+#   See: https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+# - External command-line tools used by preprocessing scripts are not pip packages:
+#   Rosetta FastRelax, HH-suite/hhblits, PSI-BLAST, UniRef/UniClust, and Swiss-Prot.
+
+torch>=2.0
+torch-geometric>=2.4
+torchmetrics>=1.0
+
+numpy>=1.23
+scipy>=1.10
+scikit-learn>=1.2
+pandas>=1.5
+matplotlib>=3.7
+networkx>=3.0
+biopython>=1.81

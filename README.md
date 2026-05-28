@@ -31,16 +31,16 @@ The model follows a paired wild-type/mutant graph formulation. For each mutation
 |   |-- datasets/              # Mutation list files and source tabular data
 |   |-- hhm/                   # HHblits profile files
 |   |-- pssm/                  # PSSM files
-|   `-- pdbs/                  # Optional relaxed protein structures, not bundled here
+|   +-- pdbs/                  # Optional relaxed protein structures, not bundled here
 |-- run/
-|   `-- best/
+|   +-- best/
 |       |-- config.json        # Configuration for the provided checkpoints
 |       |-- model_1.pkl        # Fold-1 checkpoint
 |       |-- model_2.pkl        # Fold-2 checkpoint
 |       |-- model_3.pkl        # Fold-3 checkpoint
 |       |-- model_4.pkl        # Fold-4 checkpoint
-|       `-- model_5.pkl        # Fold-5 checkpoint
-`-- src/
+|       +-- model_5.pkl        # Fold-5 checkpoint
++-- src/
     |-- dataset.py             # PairData construction and dataset loading
     |-- model.py               # GraphGNN and paired graph prediction model
     |-- training.py            # Training, evaluation, metrics, and early stopping
@@ -51,11 +51,11 @@ The model follows a paired wild-type/mutant graph formulation. For each mutation
     |   |-- features.py        # HHM, PSSM, Rosetta, and amino-acid feature readers
     |   |-- fds.py             # Feature distribution smoothing utilities
     |   |-- weights.py         # Label distribution smoothing weights
-    |   `-- utils.py           # Plotting and reporting utilities
-    `-- tools/
+    |   +-- utils.py           # Plotting and reporting utilities
+    +-- tools/
         |-- relax.py           # Rosetta FastRelax wrapper
         |-- hhblits.py         # HHblits profile generation helper
-        `-- pssm_generator.py  # PSI-BLAST PSSM generation helper
+        +-- pssm_generator.py  # PSI-BLAST PSSM generation helper
 ```
 
 ## Data
@@ -85,7 +85,7 @@ The training split is based on S2648. The evaluation scripts also include common
 
 ## Installation
 
-This repository does not currently include a pinned `requirements.txt` or `environment.yml`. The following packages are required by the code:
+Python package dependencies are listed in `requirements.txt`. The following packages are required by the code:
 
 - Python 3.9 or later
 - PyTorch
@@ -117,6 +117,12 @@ conda install biopython -c bioconda
 pip install torchmetrics
 ```
 
+Alternatively, after installing a platform-compatible PyTorch build, install the remaining Python dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
 For graph generation from raw structures, additional external tools and databases are required:
 
 - Rosetta FastRelax
@@ -133,17 +139,7 @@ The repository includes five trained checkpoints in `run/best/`, named from `run
 python predict.py --graph-dir data/Rgraph_80 --weight-dir run/best --split 5
 ```
 
-The prediction script loads `model_1.pkl` through `model_5.pkl`, averages fold predictions, and reports PCC/RMSE metrics for the configured datasets. Some plotting routines save figures to `photo/sandian/`; create this directory before plotting if needed:
-
-```bash
-mkdir -p photo/sandian
-```
-
-On Windows PowerShell:
-
-```powershell
-New-Item -ItemType Directory -Force photo/sandian
-```
+The prediction script loads `model_1.pkl` through `model_5.pkl`, averages fold predictions, and reports PCC/RMSE metrics for the configured datasets. 
 
 ## Training
 
@@ -170,9 +166,9 @@ If raw structural features are available, graphs can be regenerated with:
 ```bash
 python gen_graph.py \
   --feature_path data/features.txt \
-  --data_path data/datasets/S879_data.txt \
+  --data_path data/datasets/S2648_data.txt \
   --out_dir data/Rgraph_80 \
-  --split S879 \
+  --split S2648 \
   --contact_threshold 5 \
   --knn 10 \
   --local_radius 12
@@ -188,19 +184,19 @@ The repository includes helper scripts for generating structural and sequence-pr
 
 ```bash
 python src/tools/relax.py \
-  --mutant-list data/datasets/S1131_1_data.txt \
-  --input-pdb-dir data/wild/S1131 \
+  --mutant-list data/datasets/S2648_data.txt \
+  --input-pdb-dir data/wild/S2648 \
   --rosetta-bin tools/rosetta/relax.static.linuxgccrelease \
-  --output-dir data/pdbs/S1131
+  --output-dir data/pdbs/S2648
 ```
 
 ### HHblits Profiles
 
 ```bash
 python src/tools/hhblits.py \
-  --input-pdb-dir data/pdbs/S1131 \
+  --input-pdb-dir data/pdbs/S2648 \
   --hhsuite-db databases/UniRef30_2020_06/UniRef30_2020_06 \
-  --output-dir data/hhm/S1131 \
+  --output-dir data/hhm/S2648 \
   --cpu 8
 ```
 
@@ -233,28 +229,8 @@ The neural architecture uses a multiplex heterogeneous graph neural network to p
 - Preprocessed graph files are already available for the main benchmark splits.
 - Regenerating graphs from raw structures requires external databases and software that are not bundled in the repository.
 - The code currently contains some experiment-specific defaults, including task lists and GPU device selection.
-- The project does not yet provide a pinned dependency file; results may depend on PyTorch, PyTorch Geometric, CUDA, and package versions.
-
-## Citation
-
-This repository is related to the HierGate method described in `MHGGN_main.tex`. If you use this code or the model design, please cite the corresponding HierGate manuscript when available.
-
-The project also builds on the protein stability prediction setting and preprocessing ideas used by ThermoGNN. If you use the ThermoGNN baseline, datasets, or preprocessing protocol, please cite:
-
-```bibtex
-@article{gong2023unbiased,
-    author = {Gong, Haifan and Zhang, Yumeng and Dong, Chenhe and Wang, Yue and Chen, Guanqi and Liang, Bilin and Li, Haofeng and Liu, Lanxuan and Xu, Jie and Li, Guanbin},
-    title = {Unbiased Curriculum Learning Enhanced Global-Local Graph Neural Network for Protein Thermodynamic Stability Prediction},
-    journal = {Bioinformatics},
-    pages = {btad589},
-    year = {2023},
-    month = {09},
-    issn = {1367-4811},
-    doi = {10.1093/bioinformatics/btad589}
-}
-```
+- The project provides a lightweight `requirements.txt`; results may still depend on PyTorch, PyTorch Geometric, CUDA, and package versions.
 
 ## License
 
 No license file is currently included in this repository. Add an explicit license before public release or redistribution.
-# HierGate-main
