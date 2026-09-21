@@ -1,3 +1,18 @@
+"""Generate HHM profiles with HHblits.
+
+HierGate HMM search database
+----------------------------
+- Name / version: UniRef30_2020_06
+- Files: UniRef30_2020_06_*.ffdata / UniRef30_2020_06_*.ffindex
+- Download:
+  https://wwwuser.gwdguser.de/~compbiol/uniclust/2020_06/UniRef30_2020_06_hhsuite.tar.gz
+- Original data-file date: 2020-10-05
+- Command used here: hhblits -d UniRef30_2020_06 -n 3
+
+Sequences are read from FastRelax PDB files. This script does not change
+coordinates.
+"""
+
 import os
 import argparse
 import warnings
@@ -56,13 +71,15 @@ def pdb2seq(pdb_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Use hhblits to generate .hhm files")
+        description="Use hhblits to generate .hhm files against UniRef30_2020_06")
     parser.add_argument('-i', '--input-pdb-dir', type=str, dest='input_pdb_dir',
                         default='data/pdbs/S1131',
                         help='The directory storing the PDB files.')
     parser.add_argument('-db', '--hhsuite-db', type=str, dest="hhsuite_db",
                         default='databases/UniRef30_2020_06/UniRef30_2020_06',
-                        help='Path to HHsuite database.')
+                        help='HHsuite prefix for UniRef30_2020_06 '
+                             '(https://wwwuser.gwdguser.de/~compbiol/uniclust/2020_06/'
+                             'UniRef30_2020_06_hhsuite.tar.gz; data files dated 2020-10-05).')
     parser.add_argument('-o', '--output-dir', type=str, dest="output_dir",
                         default='data/hhm/S1131',
                         help='The directory to store all output data.')

@@ -1,10 +1,22 @@
+"""Rosetta FastRelax wild-type and mutant structures.
+
+HierGate used Rosetta 2021.16.61629. Before this script runs, wild-type PDB
+files are only copied/renamed so that each chain is stored as
+``<PDB><chain>.pdb``. FastRelax is the first (and only) coordinate refinement
+step:
+
+- wild-type: ``-in:file:fullatom -relax:constrain_relax_to_start_coords
+  -relax:ramp_constraints false -detect_disulf false``
+- mutant: the same flags plus ``-relax:respect_resfile -packing:resfile``
+"""
+
 import os
 import argparse
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Use rosetta to relax the protein structure according to the mutant list.")
+        description="Use Rosetta 2021.16.61629 FastRelax on wild-type/mutant structures.")
     parser.add_argument('-l', '--mutant-list', type=str, dest='mutant_list', default='data/datasets/S1131_1_data.txt',
                         help='A list of mutants, one per line in the format "PDBCHAIN POS WT MUT"')
     parser.add_argument('-i', '--input-pdb-dir', type=str, dest='input_pdb_dir', default='data/wild/S1131',

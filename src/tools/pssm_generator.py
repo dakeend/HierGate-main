@@ -1,6 +1,37 @@
-import os
-import re
+#!/usr/bin/env python3
+"""Generate ASCII PSSM files with PSI-BLAST.
+
+HierGate PSSM search database
+-----------------------------
+The profiles used in this work were built with PSI-BLAST against an NCBI BLAST
+formatted Swiss-Prot library, not against a UniProt release tarball.
+
+- Local path used in the original run:
+  ``/media/ST-18T/nianwen/pssm_project/databases/swissprot``
+- ``blastdbcmd -info`` / ``swissprot.pjs`` library name:
+  Non-redundant UniProtKB/SwissProt sequences
+- Date / last-updated: 2025-07-06 04:44
+- Sequences: 485,565
+- BLASTDB Version: 5  (NCBI BLAST database *format* version; this is not a
+  UniProt ``2025_xx`` release tag)
+- The ``.phr`` file stores protein entry names only. There is no UniProt
+  ``2025_xx`` label and no README in that directory, so the snapshot cannot be
+  rewritten as a UniProt release.
+
+PSI-BLAST parameters: ``-evalue 0.001 -num_iterations 3 -out_ascii_pssm``.
+"""
+
+from __future__ import annotations
+
+import argparse
 import glob
+import os
+
+SWISSPROT_BLASTDB_NAME = "Non-redundant UniProtKB/SwissProt sequences"
+SWISSPROT_LAST_UPDATED = "2025-07-06 04:44"
+SWISSPROT_N_SEQUENCES = 485565
+SWISSPROT_BLASTDB_VERSION = 5
+
 
 def extract_base_name(filename):
     """
@@ -8,106 +39,96 @@ def extract_base_name(filename):
     1a5eA.txt -> 1a5e
     1a5eA_L37S.txt -> 1a5e
     """
-    # 去除扩展名
     base = os.path.splitext(filename)[0]
-    
-    # 如果包含下划线，取第一个下划线前的部分
-    if '_' in base:
-        base = base.split('_')[0]
-    
-    # 去掉最后一个字符（通常是链标识符如A）
-    if len(base) > 4:  # 确保不是太短的名称
+    if "_" in base:
+        base = base.split("_")[0]
+    if len(base) > 4:
         base = base[:-1]
-    
     return base
 
-def generate_pssm_from_folder(input_folder, output_folder, blast_db_path):
+
+def generate_pssm_from_folder(input_folder, output_folder, blast_db_path, evalue="0.001", num_iterations=3):
     """
     从文件夹中读取所有txt文件，生成PSSM特征
-    
+
     Args:
         input_folder: 包含txt序列文件的文件夹路径
-        output_folder: PSSM文件输出文件夹路径  
+        output_folder: PSSM文件输出文件夹路径
         blast_db_path: BLAST数据库路径
     """
-    
-    # 确保输出文件夹存在
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    
-    # 获取所有txt文件
+
     txt_files = glob.glob(os.path.join(input_folder, "*.txt"))
-    
     if not txt_files:
         print("未找到任何txt文件")
         return
-    
+
     print(f"找到 {len(txt_files)} 个txt文件")
-    
-    # 临时fasta文件路径
+    print(
+        "PSI-BLAST DB: "
+        f"{blast_db_path} | {SWISSPROT_BLASTDB_NAME} | "
+        f"last-updated {SWISSPROT_LAST_UPDATED} | "
+        f"n={SWISSPROT_N_SEQUENCES} | BLASTDB v{SWISSPROT_BLASTDB_VERSION}"
+    )
     temp_fasta = os.path.join(input_folder, "Temporary.fasta")
-    
+
     for txt_file in txt_files:
         try:
-            # 获取文件名（不含路径）
             filename = os.path.basename(txt_file)
             print(f"正在处理: {filename}")
-            
-            # 读取序列
-            with open(txt_file, 'r') as f:
+            with open(txt_file, "r") as f:
                 sequence = f.read().strip()
-            
-            # 提取基础名称作为FASTA header
             base_name = extract_base_name(filename)
-            
-            # 生成临时FASTA文件
-            with open(temp_fasta, 'w') as f:
+            with open(temp_fasta, "w") as f:
                 f.write(f">{base_name}\n")
                 f.write(sequence)
-            
-            # 生成输出PSSM文件路径
             output_pssm = os.path.join(output_folder, f"{os.path.splitext(filename)[0]}.pssm")
-            
-            # 构建psiblast命令
-            # psiblast_cmd = (
-            #     f'psiblast -query "{temp_fasta}" '
-            #     f'-db "{blast_db_path}" '
-            #     f'-evalue 0.001 -num_iterations 3 '
-            #     f'-out_ascii_pssm "{output_pssm}"'
-            # )
             psiblast_cmd = (
                 f'psiblast -query "{temp_fasta}" '
                 f'-db "{blast_db_path}" '
-                f'-evalue 0.001  -num_iterations 3 '
+                f"-evalue {evalue} -num_iterations {num_iterations} "
                 f'-out_ascii_pssm "{output_pssm}"'
             )
-            # psiblast_cmd = (
-            #     f'psiblast -query "{temp_fasta}" '
-            #     f'-db "{blast_db_path}" '
-            #     f'-evalue 10 -num_iterations 3 '
-            #     f'-out_ascii_pssm "{output_pssm}"'
-            # )
-            
-            # 执行psiblast
             result = os.system(psiblast_cmd)
-            
             if result == 0:
                 print(f"  ✓ {filename} -> {os.path.basename(output_pssm)}")
             else:
                 print(f"  ✗ {filename} 处理失败")
-                
         except Exception as e:
             print(f"处理 {filename} 时出错: {str(e)}")
-    
-    # 清理临时文件
+
     if os.path.exists(temp_fasta):
         os.remove(temp_fasta)
-    
     print("所有PSSM矩阵构建完成")
 
-# 使用示例
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-i", "--input-dir", default="data/xulie/S2648")
+    parser.add_argument("-o", "--output-dir", default="data/pssm/S2648")
+    parser.add_argument(
+        "-d",
+        "--blast-db",
+        default="databases/swissprot",
+        help=(
+            "NCBI BLAST-format Swiss-Prot prefix. HierGate used "
+            f"{SWISSPROT_BLASTDB_NAME}, last-updated {SWISSPROT_LAST_UPDATED}, "
+            f"{SWISSPROT_N_SEQUENCES} sequences, BLASTDB version "
+            f"{SWISSPROT_BLASTDB_VERSION} (format version, not UniProt 2025_xx)."
+        ),
+    )
+    parser.add_argument("--evalue", default="0.001")
+    parser.add_argument("--num-iterations", type=int, default=3)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    input_folder = "data/xulie/Tp53_test"
-    output_folder = "data/pssm/Tp53_test"
-    blast_db_path = "databases/swissprot"
-    generate_pssm_from_folder(input_folder, output_folder, blast_db_path)
+    args = parse_args()
+    generate_pssm_from_folder(
+        args.input_dir,
+        args.output_dir,
+        args.blast_db,
+        evalue=args.evalue,
+        num_iterations=args.num_iterations,
+    )
