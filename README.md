@@ -32,7 +32,7 @@ The model follows a paired wild-type/mutant graph formulation. For each mutation
 |   |-- hhm/                   # HHblits profile files
 |   |-- pssm/                  # PSSM files
 |   |-- pdbs/                  # Optional relaxed protein structures, not bundled here
-|   +-- revision/              # Structure provenance index
+|   +-- revision/              # Structure provenance, FastRelax index, case-study tables
 |-- run/
 |   +-- best/
 |       |-- config.json        # Configuration for the provided checkpoints
@@ -92,6 +92,15 @@ Each sample is represented by a pair of graph files:
 ```
 
 The training split is based on S2648. The evaluation scripts also include commonly used benchmark datasets such as S350, S605, S1925, Myoglobin, P53, Ssym/test, S250, S879, and S669.
+
+### Case-study predicted ΔΔG tables (p53 and BRCA1)
+
+The complete predicted ΔΔG tables for every analyzed single-site substitution in the p53 and BRCA1 case studies are in this repository, not only as heatmap figures:
+
+- p53 (PDB 2OCJ, chain A; residues 164–289; 2,394 predictions): [`data/revision/case_studies/Table_S1_p53_full_sequence_predictions.csv`](https://github.com/dakeend/HierGate-main/blob/main/data/revision/case_studies/Table_S1_p53_full_sequence_predictions.csv)
+- BRCA1 (PDB 1T15, chain A; residues 1765–1859; 1,805 predictions): [`data/revision/case_studies/Table_S2_BRCA1_full_sequence_predictions.csv`](https://github.com/dakeend/HierGate-main/blob/main/data/revision/case_studies/Table_S2_BRCA1_full_sequence_predictions.csv)
+
+Each row contains residue position, wild-type amino acid, mutant amino acid, and predicted ΔΔG (kcal/mol). These scans are the values used for the case-study figures; they are not replaced by the 42-mutation p53 external test set.
 
 ## Original structures, preprocessing, and profile databases
 
@@ -348,5 +357,6 @@ The neural architecture uses a multiplex heterogeneous graph neural network to p
 - PSSM profiles used an NCBI BLAST Swiss-Prot snapshot dated **2025-07-06 04:44** (485,565 sequences, BLASTDB version 5). This cannot be written as a UniProt `2025_xx` release.
 - Regenerating graphs from raw structures requires Rosetta, HHblits, PSI-BLAST, and those two databases.
 - The FastRelax WT/Mut PDBs used in this work are at https://huggingface.co/datasets/luwen486/HierGate-FastRelax-PDBs.
+- Predicted ΔΔG tables for the p53 and BRCA1 case-study scans are at `data/revision/case_studies/`.
 - The code currently contains some experiment-specific defaults, including task lists and GPU device selection.
 - The project provides a lightweight `requirements.txt`; results may still depend on PyTorch, PyTorch Geometric, CUDA, and package versions.
