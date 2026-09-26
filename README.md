@@ -183,10 +183,11 @@ hf download luwen486/HierGate-FastRelax-PDBs --repo-type dataset --local-dir dat
 
 ### HMM database (UniRef30_2020_06)
 
-HHM profiles are generated from relaxed PDB sequences with HHblits, **3 iterations**, against **UniRef30_2020_06**.
+HHM profiles are generated from relaxed PDB sequences with HHblits **3.3.0**, **3 iterations**, against **UniRef30_2020_06**.
 
 | Item | Value |
 | --- | --- |
+| Program | HHblits 3.3.0 |
 | Database | UniRef30_2020_06 |
 | Files | `UniRef30_2020_06_*.ffdata` / `UniRef30_2020_06_*.ffindex` |
 | Download | https://wwwuser.gwdguser.de/~compbiol/uniclust/2020_06/UniRef30_2020_06_hhsuite.tar.gz |
@@ -205,14 +206,16 @@ python src/tools/hhblits.py \
 
 ### PSSM database (NCBI BLAST Swiss-Prot, 2025-07-06 snapshot)
 
-PSSM profiles are generated with PSI-BLAST from sequences extracted by `src/tools/extract_sequences.py`. The search library is an **NCBI BLAST-format Swiss-Prot** database. It is **not** labeled with a UniProt `2025_xx` release tag.
+PSSM profiles are generated with PSI-BLAST **2.12.0+** (NCBI BLAST+ 2.12.0) from sequences extracted by `src/tools/extract_sequences.py`. The search library is an **NCBI BLAST-format Swiss-Prot** database. It is **not** labeled with a UniProt `2025_xx` release tag.
 
 | Item | Value |
 | --- | --- |
+| Program | PSI-BLAST 2.12.0+ (NCBI BLAST+ 2.12.0, build Mar 8 2022) |
 | Local path used in the original run | `/media/ST-18T/nianwen/pssm_project/databases/swissprot` |
 | `blastdbcmd -info` / `swissprot.pjs` name | Non-redundant UniProtKB/SwissProt sequences |
 | Date / last-updated | 2025-07-06 04:44 |
 | Sequences | 485,565 |
+| Residues | 184,945,355 |
 | BLASTDB Version | 5 (NCBI BLAST *format* version, not a UniProt release) |
 | `.phr` contents | protein entry names only; no UniProt `2025_xx` string; no README in that directory |
 | PSI-BLAST flags | `-evalue 0.001 -num_iterations 3 -out_ascii_pssm` |

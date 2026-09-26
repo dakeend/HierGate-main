@@ -2,6 +2,7 @@
 
 HierGate HMM search database
 ----------------------------
+- Program: HHblits 3.3.0
 - Name / version: UniRef30_2020_06
 - Files: UniRef30_2020_06_*.ffdata / UniRef30_2020_06_*.ffindex
 - Download:
@@ -71,7 +72,7 @@ def pdb2seq(pdb_dir):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Use hhblits to generate .hhm files against UniRef30_2020_06")
+        description="Use HHblits 3.3.0 to generate .hhm files against UniRef30_2020_06")
     parser.add_argument('-i', '--input-pdb-dir', type=str, dest='input_pdb_dir',
                         default='data/pdbs/S1131',
                         help='The directory storing the PDB files.')
