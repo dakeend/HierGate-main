@@ -204,20 +204,20 @@ python src/tools/hhblits.py \
   --cpu 8
 ```
 
-### PSSM database (NCBI BLAST Swiss-Prot, 2025-07-06 snapshot)
+### PSSM database (Swiss-Prot release 2025_03)
 
-PSSM profiles are generated with PSI-BLAST **2.12.0+** (NCBI BLAST+ 2.12.0) from sequences extracted by `src/tools/extract_sequences.py`. The search library is an **NCBI BLAST-format Swiss-Prot** database. It is **not** labeled with a UniProt `2025_xx` release tag.
+PSSM profiles are generated with PSI-BLAST **2.12.0+** (NCBI BLAST+ 2.12.0) from sequences extracted by `src/tools/extract_sequences.py`. The search library is **Swiss-Prot release 2025_03**, stored as an NCBI BLAST database.
 
 | Item | Value |
 | --- | --- |
 | Program | PSI-BLAST 2.12.0+ (NCBI BLAST+ 2.12.0, build Mar 8 2022) |
+| Swiss-Prot release | 2025_03 |
 | Local path used in the original run | `/media/ST-18T/nianwen/pssm_project/databases/swissprot` |
 | `blastdbcmd -info` / `swissprot.pjs` name | Non-redundant UniProtKB/SwissProt sequences |
 | Date / last-updated | 2025-07-06 04:44 |
 | Sequences | 485,565 |
 | Residues | 184,945,355 |
-| BLASTDB Version | 5 (NCBI BLAST *format* version, not a UniProt release) |
-| `.phr` contents | protein entry names only; no UniProt `2025_xx` string; no README in that directory |
+| BLASTDB Version | 5 (NCBI BLAST *format* version, not the Swiss-Prot release number) |
 | PSI-BLAST flags | `-evalue 0.001 -num_iterations 3 -out_ascii_pssm` |
 | Script | `src/tools/pssm_generator.py` |
 | Output | `data/pssm/<split>/<suffix>.pssm` |

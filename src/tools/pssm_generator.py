@@ -4,10 +4,10 @@
 HierGate PSSM search database
 -----------------------------
 The profiles used in this work were built with PSI-BLAST 2.12.0+ (NCBI BLAST+
-2.12.0) against an NCBI BLAST formatted Swiss-Prot library, not against a
-UniProt release tarball.
+2.12.0) against Swiss-Prot release 2025_03, stored as an NCBI BLAST database.
 
 - Program: PSI-BLAST 2.12.0+ (package blast 2.12.0, build Mar 8 2022)
+- Swiss-Prot release: 2025_03
 - Local path used in the original run:
   ``/media/ST-18T/nianwen/pssm_project/databases/swissprot``
 - ``blastdbcmd -info`` / ``swissprot.pjs`` library name:
@@ -15,11 +15,8 @@ UniProt release tarball.
 - Date / last-updated: 2025-07-06 04:44
 - Sequences: 485,565
 - Residues: 184,945,355
-- BLASTDB Version: 5  (NCBI BLAST database *format* version; this is not a
-  UniProt ``2025_xx`` release tag)
-- The ``.phr`` file stores protein entry names only. There is no UniProt
-  ``2025_xx`` label and no README in that directory, so the snapshot cannot be
-  rewritten as a UniProt release.
+- BLASTDB Version: 5  (NCBI BLAST database *format* version, not the
+  Swiss-Prot release number)
 
 PSI-BLAST parameters: ``-evalue 0.001 -num_iterations 3 -out_ascii_pssm``.
 """
@@ -31,6 +28,7 @@ import glob
 import os
 
 PSIBLAST_VERSION = "2.12.0+"
+SWISSPROT_RELEASE = "2025_03"
 SWISSPROT_BLASTDB_NAME = "Non-redundant UniProtKB/SwissProt sequences"
 SWISSPROT_LAST_UPDATED = "2025-07-06 04:44"
 SWISSPROT_N_SEQUENCES = 485565
@@ -73,7 +71,7 @@ def generate_pssm_from_folder(input_folder, output_folder, blast_db_path, evalue
     print(
         "PSI-BLAST "
         f"{PSIBLAST_VERSION} DB: "
-        f"{blast_db_path} | {SWISSPROT_BLASTDB_NAME} | "
+        f"{blast_db_path} | Swiss-Prot {SWISSPROT_RELEASE} | {SWISSPROT_BLASTDB_NAME} | "
         f"last-updated {SWISSPROT_LAST_UPDATED} | "
         f"n={SWISSPROT_N_SEQUENCES} residues={SWISSPROT_N_RESIDUES} | "
         f"BLASTDB v{SWISSPROT_BLASTDB_VERSION}"
@@ -120,11 +118,11 @@ def parse_args():
         default="databases/swissprot",
         help=(
             "NCBI BLAST-format Swiss-Prot prefix. HierGate used PSI-BLAST "
-            f"{PSIBLAST_VERSION} against {SWISSPROT_BLASTDB_NAME}, "
-            f"last-updated {SWISSPROT_LAST_UPDATED}, "
+            f"{PSIBLAST_VERSION} against Swiss-Prot release {SWISSPROT_RELEASE} "
+            f"({SWISSPROT_BLASTDB_NAME}), last-updated {SWISSPROT_LAST_UPDATED}, "
             f"{SWISSPROT_N_SEQUENCES} sequences, {SWISSPROT_N_RESIDUES} residues, "
             f"BLASTDB version {SWISSPROT_BLASTDB_VERSION} "
-            "(format version, not UniProt 2025_xx)."
+            "(format version, not the Swiss-Prot release number)."
         ),
     )
     parser.add_argument("--evalue", default="0.001")

@@ -18,7 +18,7 @@ BLAST_DB=${BLAST_DB:-databases/swissprot}
 echo "Split=$SPLIT"
 echo "Mutation list=$LIST"
 echo "HHblits 3.3.0 DB=$HHSUITE_DB   # UniRef30_2020_06"
-echo "PSI-BLAST 2.12.0+ DB=$BLAST_DB   # NCBI BLAST Swiss-Prot snapshot 2025-07-06; 485,565 sequences"
+echo "PSI-BLAST 2.12.0+ DB=$BLAST_DB   # Swiss-Prot release 2025_03; last-updated 2025-07-06; 485,565 sequences"
 
 python src/tools/fetch_wild_pdbs.py --mutant-list "$LIST" --out-dir "data/wild/${SPLIT}_ori"
 python src/tools/match_wild_chains.py --mutant-list "$LIST" --src-dir "data/wild/${SPLIT}_ori" --dest-dir "data/wild/${SPLIT}"
